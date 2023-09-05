@@ -79,6 +79,74 @@ app.post('/accounts', async (req, res) => {
 
 
 
+// Read (Retrieve) an account by ID
+app.get('/accounts/:id', authenticateToken, (req, res) => {
+  const accountId = req.params.id;
+
+  db.get('SELECT * FROM Account WHERE id = ?', [accountId], (err, row) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ message: 'Internal server error' });
+    }
+
+    if (!row) {
+      return res.status(404).json({ message: 'Account not found' });
+    }
+
+    res.json(row);
+  });
+});
+
+
+
+// Update an account by ID
+app.put('/accounts/:id',authenticateToken, async (req, res) => {
+  const accountId = req.params.id;
+  const { first_name, last_name, email, phone, password, birthday } = req.body;
+
+  try {
+    // Hash the new password if provided
+    const hashedPassword = password
+      ? await bcrypt.hash(password, 10)
+      : undefined;
+
+    // Update the account
+    db.run(
+      'UPDATE Account SET first_name = ?, last_name = ?, email = ?, phone = ?, password = ?, birthday = ?, last_modified = CURRENT_TIMESTAMP WHERE id = ?',
+      [first_name, last_name, email, phone, hashedPassword, birthday, accountId],
+      (err) => {
+        if (err) {
+          console.error(err);
+          return res.status(500).json({ message: 'Internal server error' });
+        }
+
+        res.json({ message: 'Account updated successfully' });
+      }
+    );
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
+
+
+// Delete an account by ID
+app.delete('/accounts/:id',authenticateToken, (req, res) => {
+  const accountId = req.params.id;
+
+  db.run('DELETE FROM Account WHERE id = ?', [accountId], (err) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ message: 'Internal server error' });
+    }
+
+    res.json({ message: 'Account deleted successfully' });
+  });
+});
+
+
+
 // Authenticate user and issue JWT token
 app.post('/login', async (req, res) => {
   const { email, password } = req.body;
@@ -112,7 +180,7 @@ app.post('/login', async (req, res) => {
       }
 
       // Generate a JWT token
-      const token = jwt.sign({ userId: user.id, email: user.email },JWT_SECRET, {
+      const token = jwt.sign({ userId: user.id, email: user.email },process.env.JWT_SECRET, {
         expiresIn: '1h', // Token expiration time
       });
 
