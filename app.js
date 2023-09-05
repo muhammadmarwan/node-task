@@ -1,14 +1,14 @@
+require('dotenv').config();
 const express = require('express');
 const bodyParser = require('body-parser');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const db = require('./db');
 const nodemailer = require('nodemailer');
-const app = express();
-const port = 3000;
-const JWT_SECRET = 'PIDJDFBJ6Q7EHHHHWBFBF7648R268FIHBVSVDSDNLKM';
+const app = express(); 
 
 app.use(bodyParser.json());
+
 
 // Authentication middleware
 function authenticateToken(req, res, next) {
@@ -17,14 +17,13 @@ function authenticateToken(req, res, next) {
     if (!token) return res.sendStatus(401);
     console.log(token)
 
-    jwt.verify(token, JWT_SECRET, (err, user) => {
+    jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
       if (err) return res.sendStatus(403);
       req.user = user;
       next();
     });
   }
 
-// CRUD Endpoints
 
 // Create an account
 app.post('/accounts', async (req, res) => {
@@ -43,13 +42,12 @@ app.post('/accounts', async (req, res) => {
           return res.status(400).json({ error: err.message });
         }
 
-
         // Create a transporter object using your SMTP settings
         const transporter = nodemailer.createTransport({
           service: 'gmail',
           auth: {
-            user: 'testnode50@gmail.com',
-            pass: 'lnzkphvlwgeajkut',
+            user: process.env.gmailUser,
+            pass: process.env.gmailPass,
           },
         });
 
@@ -78,6 +76,7 @@ app.post('/accounts', async (req, res) => {
     res.status(500).json({ error: 'Server Error' });
   }
 });
+
 
 
 // Authenticate user and issue JWT token
@@ -127,6 +126,7 @@ app.post('/login', async (req, res) => {
 });
   
   
+
 // List accounts with result limitation
 app.get('/accounts', authenticateToken, (req, res) => {
   const limit = req.query.limit || 10;
@@ -142,7 +142,9 @@ app.get('/accounts', authenticateToken, (req, res) => {
   );
 });
 
+
+
 // Start the server
-app.listen(port, () => {
-  console.log(`Server is running on port ${port}`);
+app.listen(process.env.port, () => {
+  console.log(`Server is running on port ${process.env.port}`);
 });
